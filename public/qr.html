@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Masa QR Oluştur</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family:sans-serif; max-width:900px; margin:20px auto;">
+
+<h1>📎 Masa QR Oluşturma</h1>
+
+<label>Masa sayısı:
+  <input type="number" id="count" value="10" min="1">
+</label>
+<button onclick="generate()">QR Oluştur</button>
+
+<hr>
+
+<div id="qrs" style="display:grid; grid-template-columns:repeat(auto-fill,200px); gap:20px;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script>
+function generate() {
+  const count = +document.getElementById("count").value;
+  const box = document.getElementById("qrs");
+  box.innerHTML = "";
+
+  const BASE_URL = "http://192.168.0.2:3000";
+
+  for (let i = 1; i <= count; i++) {
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <h3>🪑 Masa ${i}</h3>
+      <canvas id="qr-${i}"></canvas>
+    `;
+    box.appendChild(div);
+
+    QRCode.toCanvas(
+      document.getElementById("qr-" + i),
+      BASE_URL + "/?masa=" + i
+    );
+  }
+}
+</script>
+
+
+</body>
+</html>

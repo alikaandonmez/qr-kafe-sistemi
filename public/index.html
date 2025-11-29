@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>QR Menü</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont;
+      background:#f6f6f6;
+      margin:0;
+      padding:16px;
+    }
+    h1 {
+      text-align:center;
+      margin-bottom:20px;
+    }
+    .menu {
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:16px;
+    }
+    .card {
+      background:white;
+      border-radius:12px;
+      padding:12px;
+      display:flex;
+      gap:12px;
+      box-shadow:0 4px 10px rgba(0,0,0,.08);
+    }
+    .card img {
+      width:100px;
+      height:100px;
+      border-radius:10px;
+      object-fit:cover;
+    }
+    .info {
+      flex:1;
+    }
+    .info h3 {
+      margin:0 0 6px;
+    }
+    .price {
+      font-weight:bold;
+      margin-bottom:8px;
+    }
+    .qty {
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .qty button {
+      width:32px;
+      height:32px;
+      border:none;
+      background:#222;
+      color:white;
+      border-radius:6px;
+      font-size:18px;
+    }
+    .submit {
+      margin-top:24px;
+      width:100%;
+      padding:14px;
+      font-size:16px;
+      background:#222;
+      color:white;
+      border:none;
+      border-radius:10px;
+    }
+    .cart {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #111;
+  color: white;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+}
+.cart button {
+  background: #fff;
+  color: #111;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+}
+
+  </style>
+</head>
+<body>
+
+<h1 id="masa">Masa</h1>
+<div style="display:flex; gap:10px; margin-bottom:20px;">
+    <button onclick="filter('all')">Tümü</button>
+    <button onclick="filter('special')">Special</button>
+    <button onclick="filter('coffee')">Coffee</button>
+    <button onclick="filter('tea')">Tea</button>
+  </div>
+  
+<div class="menu" id="menu"></div>
+
+<button class="submit" onclick="sendOrder()">Siparişi Gönder</button>
+<p id="msg" style="text-align:center;"></p>
+
+<script>
+const params = new URLSearchParams(location.search);
+const masaNo = params.get("masa") || prompt("Masa numaranız?");
+document.getElementById("masa").innerText = "Masa " + masaNo;
+
+const products = [
+  { name:"Sahlep", price:190, category:"special", img:"sahlep.jpg" },
+  { name:"Sıcak Çikolata", price:190, category:"special", img:"cikolata.jpg" },
+  { name:"Chai Tea Latte", price:200, category:"tea", img:"chai.jpg" },
+  { name:"Nutella Latte", price:220, category:"coffee", img:"nutella.jpg" }
+];
+
+
+const qty = {};
+
+const menu = document.getElementById("menu");
+products.forEach(p => {
+  qty[p.name] = 0;
+  const card = document.createElement("div");
+  card.className = "card product";
+card.dataset.cat = p.category;
+  card.innerHTML = `
+    <img src="${p.img}">
+    <div class="info">
+      <h3>${p.name}</h3>
+      <div class="price">₺${p.price}</div>
+      <div class="qty">
+        <button onclick="change('${p.name}', -1)">-</button>
+        <span id="q-${p.name}">0</span>
+        <button onclick="change('${p.name}', 1)">+</button>
+      </div>
+    </div>
+  `;
+  menu.appendChild(card);
+});
+
+function change(name, diff) {
+  qty[name] = Math.max(0, qty[name] + diff);
+  document.getElementById("q-"+name).innerText = qty[name];
+  updateTotal();
+}
+
+function sendOrder() {
+  const items = products
+    .filter(p => qty[p.name] > 0)
+    .map(p => ({ name:p.name, qty:qty[p.name], price:p.price }));
+
+  if (!items.length) return alert("Sipariş seçilmedi");
+
+  const summary = document.getElementById("summary");
+  const totalEl = document.getElementById("summaryTotal");
+  summary.innerHTML = "";
+  let total = 0;
+
+  items.forEach(i => {
+    const t = i.qty * i.price;
+    total += t;
+    summary.innerHTML += `<div>${i.name} x ${i.qty} = ₺${t}</div>`;
+  });
+
+  totalEl.innerText = "Toplam: ₺" + total;
+
+  window.pendingOrder = items;
+  document.getElementById("modal").style.display = "flex";
+}
+
+function updateTotal() {
+  let total = 0;
+  products.forEach(p => {
+    total += qty[p.name] * p.price;
+  });
+  document.getElementById("total").innerText = "Toplam: ₺" + total;
+}
+function filter(cat) {
+  document.querySelectorAll(".product").forEach(p => {
+    p.style.display =
+      (cat === "all" || p.dataset.cat === cat)
+        ? "block"
+        : "none";
+  });
+}
+function closeModal() {
+  document.getElementById("modal").style.display = "none";
+}
+
+async function confirmOrder() {
+  const res = await fetch("/api/order", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      tableId: masaNo,
+      items: window.pendingOrder
+    })
+  });
+
+  if (res.ok) {
+    document.getElementById("msg").innerText = "✅ Sipariş alındı";
+    closeModal();
+  } else {
+    alert("❌ Hata");
+  }
+}
+
+</script>
+<div class="cart">
+    <span id="total">Toplam: ₺0</span>
+    <button onclick="sendOrder()">Siparişi Gönder</button>
+  </div>
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h3>🧾 Sipariş Özeti</h3>
+      <div id="summary"></div>
+      <hr>
+      <strong id="summaryTotal"></strong><br><br>
+      <button onclick="confirmOrder()">✅ Onayla</button>
+      <button onclick="closeModal()">❌ Vazgeç</button>
+    </div>
+  </div>  
+</body>
+</html>

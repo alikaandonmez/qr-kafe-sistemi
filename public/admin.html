@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Kasa • POS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont;
+      background:#0f1115;
+      color:#fff;
+    }
+    header{
+      padding:16px 20px;
+      background:#151922;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      border-bottom:1px solid #222;
+    }
+    header h1{ margin:0; font-size:18px; }
+    .container{
+      padding:20px;
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap:16px;
+    }
+    .table{
+      background:#171b24;
+      border-radius:14px;
+      padding:14px;
+      box-shadow:0 8px 24px rgba(0,0,0,.35);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      border:1px solid #222;
+    }
+    .table-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .badge{
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:600;
+    }
+    .open{ background:#3b1d1d; color:#ff8c8c; }
+    .items{
+      font-size:14px;
+      opacity:.95;
+    }
+    .items div{ margin:4px 0; }
+    .total{
+      margin-top:6px;
+      font-size:16px;
+      font-weight:700;
+    }
+    .actions{
+      margin-top:10px;
+      display:flex;
+      gap:8px;
+    }
+    .btn{
+      flex:1;
+      padding:10px;
+      border-radius:10px;
+      border:none;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .close{
+      background:#ff5252;
+      color:#fff;
+    }
+    .close:hover{ background:#ff6b6b; }
+    .empty{
+      padding:40px;
+      text-align:center;
+      opacity:.6;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🧾 Kasa • Canlı Siparişler</h1>
+  <div>Durum: <span class="badge open">Açık Masalar</span></div>
+</header>
+
+<div class="container" id="tables">
+  <div class="empty">Sipariş bekleniyor…</div>
+</div>
+
+<script>
+async function loadTables(){
+  const res = await fetch("/api/tables");
+  const data = await res.json();
+  const box = document.getElementById("tables");
+  box.innerHTML = "";
+
+  const keys = Object.keys(data);
+  if(!keys.length){
+    box.innerHTML = '<div class="empty">Henüz sipariş yok.</div>';
+    return;
+  }
+
+  keys.forEach(id=>{
+    const orders = data[id].orders;
+    let html = "";
+    let total = 0;
+
+    orders.forEach(o=>{
+      o.items.forEach(i=>{
+        const t = i.qty * i.price;
+        total += t;
+        html += `<div>${i.name} × ${i.qty} <span style="float:right">₺${t}</span></div>`;
+      });
+    });
+
+    const card = document.createElement("div");
+    card.className = "table";
+    card.innerHTML = `
+      <div class="table-header">
+        <strong>🪑 Masa ${id}</strong>
+        <span class="badge open">Açık</span>
+      </div>
+      <div class="items">${html}</div>
+      <div class="total">Toplam: ₺${total}</div>
+      <div class="actions">
+        <button class="btn close" onclick="closeTable('${id}')">Hesabı Kapat</button>
+      </div>
+    `;
+    box.appendChild(card);
+  });
+}
+
+async function closeTable(id){
+  if(!confirm("Masa "+id+" hesabı kapatılsın mı?")) return;
+  await fetch("/api/close",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ tableId:id })
+  });
+  loadTables();
+}
+
+loadTables();
+setInterval(loadTables,3000);
+</script>
+
+</body>
+</html>
