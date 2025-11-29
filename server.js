@@ -1,6 +1,8 @@
 const express = require("express");
 const app = express();
-const PORT = 3000;
+
+// 🔴 Render PORT'u buradan verir
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.static("public"));
@@ -8,7 +10,7 @@ app.use(express.json());
 
 const tables = {};
 
-// ✅ Sipariş alma
+// Sipariş alma
 app.post("/api/order", (req, res) => {
   const { tableId, items } = req.body;
   if (!tableId || !items || !items.length) {
@@ -27,15 +29,13 @@ app.post("/api/order", (req, res) => {
   res.sendStatus(200);
 });
 
-// ✅ Tüm masaları getir (admin)
+// Admin – tüm masalar
 app.get("/api/tables", (req, res) => {
   res.json(tables);
 });
 
-// ✅ Masa hesabı kapatma (TEK VE NET)
+// ✅ Masa hesabı kapatma
 app.post("/api/close", (req, res) => {
-  console.log("✅ CLOSE GELDİ:", req.body);
-
   const { tableId } = req.body;
   if (!tableId || !tables[tableId]) {
     return res.sendStatus(400);
@@ -45,6 +45,7 @@ app.post("/api/close", (req, res) => {
   res.sendStatus(200);
 });
 
-app.listen(PORT, () => {
-  console.log("🚀 Server çalışıyor: http://localhost:3000");
+// ✅ MUTLAKA 0.0.0.0
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("🚀 Server running on port:", PORT);
 });
