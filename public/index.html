@@ -210,22 +210,29 @@ function closeModal() {
 }
 
 async function confirmOrder() {
-  const res = await fetch("/api/order", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      tableId: masaNo,
-      items: window.pendingOrder
-    })
-  });
+  try {
+    const res = await fetch("/api/order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tableId: masaNo,
+        items: window.pendingOrder
+      })
+    });
 
-  if (res.ok) {
-    document.getElementById("msg").innerText = "✅ Sipariş alındı";
-    closeModal();
-  } else {
-    alert("❌ Hata");
+    const text = await res.text(); // cevabı string olarak al
+
+    if (res.ok) {
+      document.getElementById("msg").innerText = "✅ Sipariş alındı";
+      closeModal();
+    } else {
+      alert("❌ Hata (" + res.status + "): " + text);
+    }
+  } catch (err) {
+    alert("❌ İstek atılamadı: " + err.message);
   }
 }
+
 
 </script>
 <div class="cart">
