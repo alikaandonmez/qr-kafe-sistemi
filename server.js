@@ -17,6 +17,7 @@ app.post("/api/order", (req, res) => {
     return res.status(400).json({ error: "Geçersiz sipariş" });
   }
 
+  // Masa kaydı yoksa oluştur
   if (!tables[tableId]) {
     tables[tableId] = {
       pendingOrders: [],
@@ -24,17 +25,48 @@ app.post("/api/order", (req, res) => {
     };
   }
 
-  tables[tableId].pendingOrders.push({
-    items,
-    time: Date.now()
-  });
-  
+  // 🔹 ÖNEMLİ DEĞİŞİKLİK:
+  // Eskiden: bütün ürünler tek "items" dizisi olarak ekleniyordu
+  // Şimdi: her ürünü tek tek pendingOrders içine yazıyoruz
+  items.forEach(item => {
+    tables[tableId].pendingOrders.push({
+      id: Date.now() + Math.random(), // ✅ BENZERSİZ ID
+      name: item.name,
+      qty: item.qty,
+      price: item.price,
+      time: Date.now()
+    });
+  });  
 
   res.sendStatus(200);
 });
 
+
 // ✅ Sipariş ONAYLAMA
+// ✅ Sipariş ONAYLAMA (ID ile)
 app.post("/api/confirm", (req, res) => {
+  const { tableId, orderId } = req.body;
+
+  if (!tableId || !orderId || !tables[tableId]) {
+    return res.sendStatus(400);
+  }
+
+  const index = tables[tableId].pendingOrders.findIndex(
+    o => o.id === orderId
+  );
+
+  if (index === -1) {
+    return res.sendStatus(404);
+  }
+
+  const order = tables[tableId].pendingOrders.splice(index, 1)[0];
+  tables[tableId].confirmedOrders.push(order);
+
+  res.sendStatus(200);
+});
+
+
+app.post("/api/unconfirm", (req, res) => {
   const { tableId, orderIndex } = req.body;
 
   if (
@@ -45,12 +77,12 @@ app.post("/api/confirm", (req, res) => {
     return res.sendStatus(400);
   }
 
-  const order = tables[tableId].pendingOrders.splice(orderIndex, 1)[0];
+  const order = tables[tableId].confirmedOrders.splice(orderIndex, 1)[0];
   if (!order) {
     return res.sendStatus(404);
   }
 
-  tables[tableId].confirmedOrders.push(order);
+  tables[tableId].pendingOrders.push(order);
 
   res.sendStatus(200);
 });
