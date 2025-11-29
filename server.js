@@ -18,16 +18,43 @@ app.post("/api/order", (req, res) => {
   }
 
   if (!tables[tableId]) {
-    tables[tableId] = { orders: [] };
+    tables[tableId] = {
+      pendingOrders: [],
+      confirmedOrders: []
+    };
   }
 
-  tables[tableId].orders.push({
+  tables[tableId].pendingOrders.push({
     items,
     time: Date.now()
   });
+  
 
   res.sendStatus(200);
 });
+
+// ✅ Sipariş ONAYLAMA
+app.post("/api/confirm", (req, res) => {
+  const { tableId, orderIndex } = req.body;
+
+  if (
+    !tableId ||
+    orderIndex === undefined ||
+    !tables[tableId]
+  ) {
+    return res.sendStatus(400);
+  }
+
+  const order = tables[tableId].pendingOrders.splice(orderIndex, 1)[0];
+  if (!order) {
+    return res.sendStatus(404);
+  }
+
+  tables[tableId].confirmedOrders.push(order);
+
+  res.sendStatus(200);
+});
+
 
 // Admin – tüm masalar
 app.get("/api/tables", (req, res) => {

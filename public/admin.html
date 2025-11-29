@@ -108,17 +108,39 @@ async function loadTables(){
   }
 
   keys.forEach(id=>{
-    const orders = data[id].orders;
+    const pending = data[id].pendingOrders || [];
+const confirmed = data[id].confirmedOrders || [];
     let html = "";
     let total = 0;
 
-    orders.forEach(o=>{
-      o.items.forEach(i=>{
-        const t = i.qty * i.price;
-        total += t;
-        html += `<div>${i.name} × ${i.qty} <span style="float:right">₺${t}</span></div>`;
-      });
+    // ✅ Onaylananlar (hesap)
+confirmed.forEach(o=>{
+  o.items.forEach(i=>{
+    const t = i.qty * i.price;
+    total += t;
+    html += `<div>${i.name} × ${i.qty} <span style="float:right">₺${t}</span></div>`;
+  });
+});
+
+// ⏳ Bekleyen siparişler
+if (pending.length) {
+  html += `<hr style="border-color:#333"><strong>Bekleyen Siparişler</strong>`;
+  pending.forEach((o, index) => {
+    o.items.forEach(i => {
+      html += `
+        <div style="margin-top:6px">
+          ${i.name} × ${i.qty}
+          <button
+            style="float:right;padding:4px 8px;border-radius:6px;border:none;background:#4caf50;color:#000;font-weight:700;cursor:pointer"
+            onclick="confirmOrder('${id}', ${index})">
+            ✅ ONAYLA
+          </button>
+        </div>
+      `;
     });
+  });
+}
+
 
     const card = document.createElement("div");
     card.className = "table";
@@ -144,6 +166,18 @@ async function closeTable(id){
     headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ tableId:id })
   });
+  loadTables();
+}
+async function confirmOrder(tableId, orderIndex) {
+  await fetch("/api/confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      tableId,
+      orderIndex
+    })
+  });
+
   loadTables();
 }
 
