@@ -42,8 +42,7 @@ app.post("/api/order", (req, res) => {
 });
 
 
-// ✅ Sipariş ONAYLAMA
-// ✅ Sipariş ONAYLAMA (ID ile)
+// ✅ Sipariş ONAYLAMA (orderId ile)
 app.post("/api/confirm", (req, res) => {
   const { tableId, orderId } = req.body;
 
@@ -52,7 +51,7 @@ app.post("/api/confirm", (req, res) => {
   }
 
   const index = tables[tableId].pendingOrders.findIndex(
-    o => o.id === orderId
+    item => item.id === orderId
   );
 
   if (index === -1) {
@@ -64,6 +63,7 @@ app.post("/api/confirm", (req, res) => {
 
   res.sendStatus(200);
 });
+
 
 
 app.post("/api/unconfirm", (req, res) => {
