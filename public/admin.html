@@ -1,189 +1,861 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Kasa • POS</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>Admin Panel • POS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            dark: { 900: '#0f1115', 800: '#151922', 700: '#1d222e' },
+            gold: { 500: '#d4af37', 600: '#b5932a' }
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    body{
-      margin:0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont;
-      background:#0f1115;
-      color:#fff;
+    /* Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #151922; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+    /* Modal Animation */
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
     }
-    header{
-      padding:16px 20px;
-      background:#151922;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      border-bottom:1px solid #222;
-    }
-    header h1{ margin:0; font-size:18px; }
-    .container{
-      padding:20px;
-      display:grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap:16px;
-    }
-    .table{
-      background:#171b24;
-      border-radius:14px;
-      padding:14px;
-      box-shadow:0 8px 24px rgba(0,0,0,.35);
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      border:1px solid #222;
-    }
-    .table-header{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-    }
-    .badge{
-      padding:4px 10px;
-      border-radius:999px;
-      font-size:12px;
-      font-weight:600;
-    }
-    .open{ background:#3b1d1d; color:#ff8c8c; }
-    .items{
-      font-size:14px;
-      opacity:.95;
-    }
-    .items div{ margin:4px 0; }
-    .total{
-      margin-top:6px;
-      font-size:16px;
-      font-weight:700;
-    }
-    .actions{
-      margin-top:10px;
-      display:flex;
-      gap:8px;
-    }
-    .btn{
-      flex:1;
-      padding:10px;
-      border-radius:10px;
-      border:none;
-      font-weight:700;
-      cursor:pointer;
-    }
-    .close{
-      background:#ff5252;
-      color:#fff;
-    }
-    .close:hover{ background:#ff6b6b; }
-    .empty{
-      padding:40px;
-      text-align:center;
-      opacity:.6;
+    .modal-active .modal-content {
+        animation: modalFadeIn 0.2s ease-out forwards;
     }
   </style>
 </head>
-<body>
+<body class="bg-dark-900 text-gray-100 font-sans antialiased min-h-screen">
 
-<header>
-  <h1>🧾 Kasa • Canlı Siparişler</h1>
-  <div>Durum: <span class="badge open">Açık Masalar</span></div>
-</header>
+  <!-- Header -->
+  <header class="bg-dark-800 border-b border-dark-700 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+        <h1 class="text-xl font-bold tracking-tight">Kasa <span class="text-gold-500">POS</span></h1>
+      </div>
+      
+      <nav id="navLinks" class="hidden md:flex gap-6 text-sm font-medium">
+        <button onclick="switchTab('orders')" id="tab-orders" class="text-gold-500 hover:text-white transition">Canlı Siparişler</button>
+        <button onclick="switchTab('reports')" id="tab-reports" class="text-gray-400 hover:text-white transition">Raporlar</button>
+        <button onclick="switchTab('menu')" id="tab-menu" class="text-gray-400 hover:text-white transition">Menü Yönetimi</button>
+      </nav>
+      
+      <button onclick="logout()" class="text-xs text-red-400 hover:text-red-300">Çıkış Yap</button>
+    </div>
+  </header>
 
-<div class="container" id="tables">
-  <div class="empty">Sipariş bekleniyor…</div>
-</div>
+  <!-- Login Screen -->
+  <div id="loginScreen" class="fixed inset-0 bg-dark-900 z-[100] flex items-center justify-center p-4">
+    <div class="bg-dark-800 p-8 rounded-2xl shadow-2xl border border-dark-700 w-full max-w-sm">
+      <h2 class="text-2xl font-bold mb-2 text-center">Giriş Yap</h2>
+      <p class="text-gray-400 text-sm text-center mb-6">Yönetici paneline erişmek için şifre giriniz.</p>
+      
+      <input type="password" id="adminPass" placeholder="Şifre" 
+             class="w-full bg-dark-900 border border-dark-700 rounded-lg px-4 py-3 mb-4 focus:ring-2 focus:ring-gold-500 focus:outline-none transition">
+      
+      <button onclick="adminLogin()" 
+              class="w-full bg-gold-500 hover:bg-gold-600 text-dark-900 font-bold py-3 rounded-lg transition transform active:scale-95">
+        Giriş Yap
+      </button>
+      <p id="loginError" class="text-red-500 text-center text-sm mt-4 min-h-[20px]"></p>
+    </div>
+  </div>
+
+  <!-- MODAL 1: Payment Confirmation (Green Theme) -->
+  <div id="paymentModal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4 bg-black/70 backdrop-blur-sm transition-all duration-300">
+    <div class="modal-content bg-dark-800 rounded-2xl border border-dark-700 shadow-2xl w-full max-w-md overflow-hidden transform">
+      <!-- Modal Header -->
+      <div class="bg-dark-900/50 p-6 text-center border-b border-dark-700">
+        <div class="w-12 h-12 bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/20">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-white">Ödeme Onayı</h3>
+        <p class="text-gray-400 text-sm mt-1">İşlemi onaylıyor musunuz?</p>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-8 text-center">
+        <p class="text-gray-400 mb-2 text-sm">Seçilen ürünler için alınacak tutar</p>
+        <div class="text-4xl font-bold text-gold-500 tracking-tight" id="modalAmount">₺0.00</div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-dark-700/30 border-t border-dark-700 grid grid-cols-2 gap-3">
+        <button onclick="closePaymentModal()" 
+                class="px-4 py-3 rounded-lg text-gray-400 font-medium bg-dark-700 hover:bg-dark-600 hover:text-white transition">
+            Vazgeç
+        </button>
+        <button onclick="confirmPaymentProcess()" 
+                class="px-4 py-3 rounded-lg bg-green-600 hover:bg-green-500 text-white font-bold shadow-lg shadow-green-900/20 transition transform active:scale-95">
+            Ödemeyi Tamamla
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Close Table Confirmation (Red/Danger Theme) -->
+  <div id="closeTableModal" class="fixed inset-0 z-[70] hidden items-center justify-center p-4 bg-black/70 backdrop-blur-sm transition-all duration-300">
+    <div class="modal-content bg-dark-800 rounded-2xl border border-red-900/30 shadow-2xl w-full max-w-md overflow-hidden transform">
+      <!-- Modal Header -->
+      <div class="bg-dark-900/50 p-6 text-center border-b border-dark-700">
+        <div class="w-12 h-12 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-white">Hesabı Kapat</h3>
+        <p class="text-red-400 text-sm mt-1 font-medium">Dikkat: Bu işlem geri alınamaz!</p>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-8 text-center">
+        <p class="text-gray-300 text-base">
+          <span class="font-bold text-white" id="closeModalTableName">Masa X</span> 
+          hesabı tamamen kapatılacak. Emin misiniz?
+        </p>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-dark-700/30 border-t border-dark-700 grid grid-cols-2 gap-3">
+        <button onclick="closeCloseModal()" 
+                class="px-4 py-3 rounded-lg text-gray-400 font-medium bg-dark-700 hover:bg-dark-600 hover:text-white transition">
+            Vazgeç
+        </button>
+        <button onclick="confirmCloseTableProcess()" 
+                class="px-4 py-3 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold shadow-lg shadow-red-900/20 transition transform active:scale-95">
+            Masayı Kapat
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main id="adminApp" class="max-w-7xl mx-auto p-4 md:p-6 hidden">
+    
+    <!-- Mobile Tab Switcher -->
+    <div class="md:hidden flex bg-dark-800 p-1 rounded-lg mb-6 gap-1">
+      <button onclick="switchTab('orders')" class="flex-1 py-2 text-sm font-bold rounded-md transition" id="mob-tab-orders">Siparişler</button>
+      <button onclick="switchTab('reports')" class="flex-1 py-2 text-sm font-bold rounded-md transition" id="mob-tab-reports">Raporlar</button>
+      <button onclick="switchTab('menu')" class="flex-1 py-2 text-sm font-bold rounded-md transition" id="mob-tab-menu">Menü</button>
+    </div>
+
+    <!-- ORDERS VIEW -->
+    <div id="view-orders">
+      <div id="tables" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <!-- Tables will be injected here -->
+        <div class="col-span-full text-center py-20 text-gray-500">
+            Sipariş verileri yükleniyor...
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORTS VIEW (New) -->
+    <div id="view-reports" class="hidden">
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <!-- Card 1 -->
+        <div class="bg-dark-800 p-6 rounded-xl border border-dark-700 shadow-lg flex items-center justify-between">
+            <div>
+                <p class="text-gray-400 text-sm uppercase tracking-wider mb-1">Bugünün Cirosu</p>
+                <h3 class="text-3xl font-bold text-gold-500" id="report-today-total">₺0.00</h3>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-gold-500/20 flex items-center justify-center text-gold-500">
+                <span class="text-2xl">₺</span>
+            </div>
+        </div>
+        <!-- Card 2 -->
+        <div class="bg-dark-800 p-6 rounded-xl border border-dark-700 shadow-lg flex items-center justify-between">
+            <div>
+                <p class="text-gray-400 text-sm uppercase tracking-wider mb-1">Kapanan Masa</p>
+                <h3 class="text-3xl font-bold text-white" id="report-today-count">0</h3>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
+                <span class="text-2xl">📋</span>
+            </div>
+        </div>
+      </div>
+
+      <!-- History Table -->
+      <div class="bg-dark-800 rounded-xl border border-dark-700 shadow-lg overflow-hidden">
+         <div class="p-4 border-b border-dark-700 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-white">Geçmiş Satışlar</h3>
+            <button onclick="loadReports()" class="text-xs text-gold-500 hover:text-white transition">Yenile</button>
+         </div>
+         <div class="overflow-x-auto">
+             <table class="w-full text-left text-sm text-gray-400">
+                 <thead class="bg-dark-900 uppercase font-bold text-xs">
+                     <tr>
+                         <th class="px-6 py-3">Tarih</th>
+                         <th class="px-6 py-3">Masa</th>
+                         <th class="px-6 py-3">Tutar</th>
+                     </tr>
+                 </thead>
+                 <tbody id="reports-table-body" class="divide-y divide-dark-700">
+                     <!-- Rows go here -->
+                 </tbody>
+             </table>
+         </div>
+      </div>
+    </div>
+
+    <!-- MENU VIEW -->
+    <div id="view-menu" class="hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Add Product Form -->
+        <div class="lg:col-span-1">
+          <div class="bg-dark-800 p-6 rounded-xl border border-dark-700 sticky top-24">
+            <h3 class="text-lg font-bold mb-4 text-gold-500">Yeni Ürün Ekle</h3>
+            <form onsubmit="addProduct(event)" class="space-y-4">
+              <div>
+                <label class="block text-xs uppercase text-gray-500 mb-1">Ürün Adı</label>
+                <input type="text" name="name" required class="w-full bg-dark-900 border border-dark-700 rounded p-2 focus:border-gold-500 outline-none">
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs uppercase text-gray-500 mb-1">Fiyat (₺)</label>
+                  <input type="number" name="price" required class="w-full bg-dark-900 border border-dark-700 rounded p-2 focus:border-gold-500 outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs uppercase text-gray-500 mb-1">Kategori</label>
+                  <input type="text" name="category" list="catList" required class="w-full bg-dark-900 border border-dark-700 rounded p-2 focus:border-gold-500 outline-none">
+                  <datalist id="catList">
+                    <option value="Sıcak İçecekler">
+                    <option value="Soğuk İçecekler">
+                    <option value="Tatlılar">
+                    <option value="Atıştırmalık">
+                  </datalist>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs uppercase text-gray-500 mb-1">Resim URL</label>
+                <input type="url" name="image" placeholder="https://..." class="w-full bg-dark-900 border border-dark-700 rounded p-2 focus:border-gold-500 outline-none">
+              </div>
+              <div>
+                 <label class="block text-xs uppercase text-gray-500 mb-1">Açıklama</label>
+                 <textarea name="description" rows="2" class="w-full bg-dark-900 border border-dark-700 rounded p-2 focus:border-gold-500 outline-none"></textarea>
+              </div>
+              <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition">
+                + Listeye Ekle
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Product List -->
+        <div class="lg:col-span-2">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">Mevcut Menü</h3>
+                <button onclick="loadMenuForAdmin()" class="text-sm text-gold-500 hover:underline">Yenile</button>
+            </div>
+            <div id="menuList" class="space-y-3">
+                <!-- Menu items injected here -->
+            </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
 
 <script>
-async function loadTables(){
-  const res = await fetch("/api/tables");
-  const data = await res.json();
-  const box = document.getElementById("tables");
-  box.innerHTML = "";
+const ADMIN_TOKEN_KEY = "adminToken";
+let adminToken = localStorage.getItem(ADMIN_TOKEN_KEY) || null;
+let tablesInterval = null;
+let partialPayInputs = {}; // Stores spinner values: { "TableId-ItemName": value }
+let refreshPaused = false; // Prevents UI refresh when user is interacting with inputs
+let pendingPaymentTableId = null; // Track which table is being paid
+let pendingCloseTableId = null; // Track which table is being closed
 
-  const keys = Object.keys(data);
-  if(!keys.length){
-    box.innerHTML = '<div class="empty">Henüz sipariş yok.</div>';
-    return;
+// --- VIEW MANAGEMENT ---
+function switchTab(tab) {
+  const views = ['orders', 'menu', 'reports'];
+  
+  // Hide all
+  views.forEach(v => {
+      document.getElementById(`view-${v}`).classList.add('hidden');
+      const deskBtn = document.getElementById(`tab-${v}`);
+      const mobBtn = document.getElementById(`mob-tab-${v}`);
+      
+      if(deskBtn) {
+          deskBtn.classList.remove('text-gold-500');
+          deskBtn.classList.add('text-gray-400');
+      }
+      if(mobBtn) {
+          mobBtn.classList.remove('bg-gold-500', 'text-dark-900');
+          mobBtn.classList.add('text-gray-300');
+      }
+  });
+
+  // Show active
+  document.getElementById(`view-${tab}`).classList.remove('hidden');
+  
+  const activeDeskBtn = document.getElementById(`tab-${tab}`);
+  const activeMobBtn = document.getElementById(`mob-tab-${tab}`);
+  
+  if(activeDeskBtn) {
+      activeDeskBtn.classList.add('text-gold-500');
+      activeDeskBtn.classList.remove('text-gray-400');
+  }
+  if(activeMobBtn) {
+      activeMobBtn.classList.add('bg-gold-500', 'text-dark-900');
+      activeMobBtn.classList.remove('text-gray-300');
   }
 
-  keys.forEach(id=>{
-    const pending = data[id].pendingOrders || [];
-const confirmed = data[id].confirmedOrders || [];
-    let html = "";
-    let total = 0;
-
-    // ✅ Onaylananlar (hesap)
-confirmed.forEach(o=>{
-  o.items.forEach(i=>{
-    const t = i.qty * i.price;
-    total += t;
-    html += `<div>${i.name} × ${i.qty} <span style="float:right">₺${t}</span></div>`;
-  });
-});
-
-// ⏳ Bekleyen siparişler
-if (pending.length) {
-  html += `<hr style="border-color:#333"><strong>Bekleyen Siparişler</strong>`;
-  pending.forEach((o, index) => {
-    o.items.forEach(i => {
-      html += `
-        <div style="margin-top:6px">
-          ${i.name} × ${i.qty}
-          <button
-            style="float:right;padding:4px 8px;border-radius:6px;border:none;background:#4caf50;color:#000;font-weight:700;cursor:pointer"
-            onclick="confirmOrder('${id}', ${index})">
-            ✅ ONAYLA
-          </button>
-        </div>
-      `;
-    });
-  });
+  // Specific Logic
+  if (tab === 'menu') loadMenuForAdmin();
+  if (tab === 'reports') loadReports();
 }
 
+// --- POLLING CONTROLS ---
+function stopRefresh() {
+  refreshPaused = true;
+}
+
+function startRefresh() {
+  refreshPaused = false;
+}
+
+// --- AUTH ---
+function showApp() {
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("adminApp").style.display = "block";
+  switchTab('orders'); // Default tab
+  loadTables();
+  if (!tablesInterval) tablesInterval = setInterval(loadTables, 3000);
+}
+
+async function adminLogin() {
+  const pass = document.getElementById("adminPass").value.trim();
+  const errEl = document.getElementById("loginError");
+  errEl.textContent = "Giriş yapılıyor...";
+
+  try {
+    const res = await fetch("/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pass })
+    });
+
+    if (!res.ok) throw new Error("Şifre hatalı");
+
+    const data = await res.json();
+    adminToken = data.token;
+    localStorage.setItem(ADMIN_TOKEN_KEY, adminToken);
+    showApp();
+  } catch (e) {
+    errEl.textContent = e.message;
+  }
+}
+
+function logout() {
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+  location.reload();
+}
+
+// --- ORDER LOGIC ---
+async function loadTables() {
+  // If view is hidden or paused, skip
+  if(document.getElementById("view-orders").classList.contains("hidden")) return;
+  if (!adminToken) return;
+  if (refreshPaused) return; 
+
+  try {
+    const res = await fetch("/api/tables", { headers: { "x-admin-token": adminToken } });
+    if (res.status === 401) return logout();
+    const tables = await res.json();
+    renderTables(tables);
+  } catch (e) { console.error(e); }
+}
+
+function renderTables(tables) {
+  const box = document.getElementById("tables");
+  const keys = Object.keys(tables);
+
+  if (!keys.length) {
+    box.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center py-20 opacity-50">
+      <div class="text-6xl mb-4">☕</div>
+      <div class="text-xl">Aktif masa yok</div>
+    </div>`;
+    return;
+  }
+  
+  // Clear container
+  box.innerHTML = "";
+  
+  keys.forEach(id => {
+    const t = tables[id];
+    let remainingTotal = 0; // Total of UNPAID items
+    
+    // 1. GROUP ORDERS BY NAME
+    const groupedOrders = {};
+    t.confirmedOrders.forEach(o => {
+        if (!groupedOrders[o.name]) {
+            groupedOrders[o.name] = { 
+                name: o.name, 
+                price: o.price, 
+                qty: 0, 
+                paidQty: 0 
+            };
+        }
+        groupedOrders[o.name].qty += o.qty;
+        groupedOrders[o.name].paidQty += (o.paidQty || 0);
+    });
+
+    // 2. SPLIT INTO LISTS
+    const activeItems = [];
+    const paidItems = [];
+
+    Object.values(groupedOrders).forEach(item => {
+        if (item.qty - item.paidQty > 0) activeItems.push(item);
+        if (item.paidQty > 0) paidItems.push(item);
+    });
+
+    // 3. GENERATE HTML & CALCULATE PRE-SELECTED TOTAL
+    let activeHtml = "";
+    let paidHtml = "";
+    let currentTableSelectedTotal = 0; // Calculate selected total for this table during render
+
+    // A) ACTIVE ITEMS SECTION
+    activeItems.forEach(item => {
+        const remainingQty = item.qty - item.paidQty;
+        const lineRemainingPrice = remainingQty * item.price;
+        remainingTotal += lineRemainingPrice;
+        
+        const inputKey = `${id}-${item.name}`;
+        const savedVal = partialPayInputs[inputKey] || "";
+
+        // Add to selected total if saved value exists
+        if(savedVal && parseFloat(savedVal) > 0) {
+          currentTableSelectedTotal += parseFloat(savedVal) * item.price;
+        }
+
+        activeHtml += `
+            <div class="bg-dark-900/50 p-2 rounded mb-2 border-l-2 border-green-500 transition hover:bg-dark-900">
+              <div class="flex justify-between text-sm mb-1">
+                 <div>
+                    <span class="font-bold text-white">${item.name}</span>
+                    <span class="text-gray-300 text-xs ml-1">x${item.qty}</span>
+                 </div>
+                 <div class="text-right">
+                    <div class="text-white">₺${lineRemainingPrice}</div>
+                 </div>
+              </div>
+              <div class="flex items-center gap-2 mt-2">
+                 <div class="text-[10px] text-gray-500 uppercase flex-1">
+                    Kalan: <span class="text-gray-300 font-bold">${remainingQty}</span>
+                 </div>
+                 <input type="number" min="0" max="${remainingQty}" placeholder="0" value="${savedVal}"
+                       class="w-16 bg-dark-700 text-xs text-center border border-gray-700 rounded py-1 partial-input focus:border-gold-500 focus:bg-dark-600 outline-none transition text-white"
+                       data-table="${id}" 
+                       data-name="${item.name}"
+                       data-price="${item.price}"
+                       onfocus="stopRefresh()"
+                       onblur="startRefresh()"
+                       oninput="handleInput(this)">
+              </div>
+            </div>`;
+    });
+
+    // B) PENDING ORDERS (Middle)
+    let pendingHtml = "";
+    if (t.pendingOrders.length) {
+        pendingHtml += `
+          <div class="mt-4 mb-2">
+            <div class="text-xs text-yellow-500 font-bold uppercase mb-2 animate-pulse">Onay Bekleyenler</div>
+            ${t.pendingOrders.map(o => `
+              <div class="flex justify-between items-center bg-yellow-900/20 p-2 rounded mb-1 border border-yellow-900/50">
+                <span class="text-sm text-yellow-100">${o.name} x${o.qty}</span>
+                <button onclick="confirmOrder('${id}', ${o.id})" class="bg-green-600 hover:bg-green-500 text-white text-[10px] px-2 py-1 rounded font-bold transition">ONAYLA</button>
+              </div>
+            `).join('')}
+          </div>`;
+    }
+
+    // C) PAID ITEMS SECTION
+    if (paidItems.length > 0) {
+        paidHtml += `
+          <div class="my-4 border-t border-dashed border-gray-700 relative">
+             <span class="absolute left-1/2 -translate-x-1/2 -top-2 bg-dark-800 px-2 text-[10px] text-gray-500">GEÇMİŞ</span>
+          </div>
+          <div class="opacity-60 grayscale hover:grayscale-0 transition-all duration-300">
+             <div class="text-xs text-gray-500 font-bold uppercase mb-2">✅ Ödenenler</div>
+             ${paidItems.map(item => `
+               <div class="flex justify-between items-center bg-dark-900/30 p-2 rounded mb-1 border border-dark-700">
+                  <div class="text-sm">
+                    <span class="text-gray-400 font-bold line-through decoration-green-900">${item.name}</span>
+                    <span class="text-[10px] text-green-500 ml-2 font-mono border border-green-900/50 px-1 rounded">
+                      ${item.paidQty} adet ödendi
+                    </span>
+                  </div>
+                  <span class="text-green-800 text-xs">✓</span>
+               </div>
+             `).join('')}
+          </div>
+        `;
+    }
+
+    if (!activeHtml && !pendingHtml && !paidHtml) {
+        activeHtml = '<div class="text-center text-gray-600 text-sm py-4">Sipariş yok</div>';
+    }
+
+    // DETERMINE BUTTON STATE BASED ON CALCULATED TOTAL
+    const hasSelection = currentTableSelectedTotal > 0;
+    const btnClass = hasSelection 
+        ? "bg-dark-700 hover:bg-gold-600 hover:text-dark-900 text-white cursor-pointer" 
+        : "bg-dark-800 text-gray-600 cursor-not-allowed";
+    const btnDisabled = hasSelection ? "" : "disabled";
+    const indicatorOpacity = hasSelection ? "opacity-100" : "opacity-0";
 
     const card = document.createElement("div");
-    card.className = "table";
+    card.className = "bg-dark-800 rounded-xl border border-dark-700 shadow-xl overflow-hidden flex flex-col hover:border-gray-600 transition duration-300";
     card.innerHTML = `
-      <div class="table-header">
-        <strong>🪑 Masa ${id}</strong>
-        <span class="badge open">Açık</span>
+      <div class="bg-dark-700/50 p-4 flex justify-between items-center border-b border-dark-700">
+        <h3 class="font-bold text-lg text-white">Masa ${id}</h3>
+        <span class="bg-green-900/30 text-green-400 text-xs px-2 py-1 rounded-full border border-green-900/50 font-mono">AÇIK</span>
       </div>
-      <div class="items">${html}</div>
-      <div class="total">Toplam: ₺${total}</div>
-      <div class="actions">
-        <button class="btn close" onclick="closeTable('${id}')">Hesabı Kapat</button>
+      
+      <div class="p-4 flex-1 overflow-y-auto max-h-[350px] custom-scrollbar">
+        ${activeHtml}
+        ${pendingHtml}
+        ${paidHtml}
+      </div>
+      
+      <div class="p-4 bg-dark-900/50 border-t border-dark-700 mt-auto">
+        <!-- Live Selected Total Display -->
+        <div id="selection-indicator-${id}" class="mb-2 text-right text-xs text-gold-500 font-bold h-4 transition-opacity ${indicatorOpacity}">
+           Seçilen Tutar: ₺${currentTableSelectedTotal}
+        </div>
+
+        <div class="flex justify-between items-end mb-4">
+          <span class="text-gray-400 text-sm">Kalan Tutar</span>
+          <span class="text-2xl font-bold text-white">₺${remainingTotal}</span>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="openPaymentModal('${id}')" 
+                  id="btn-pay-${id}"
+                  ${btnDisabled}
+                  class="text-sm py-3 rounded-lg font-bold transition ${btnClass}">
+            Kısmi Öde
+          </button>
+          <button onclick="openCloseModal('${id}')" class="bg-red-900/20 hover:bg-red-600 text-red-300 hover:text-white text-sm py-3 rounded-lg font-bold transition border border-red-900/50">
+            Masayı Kapat
+          </button>
+        </div>
       </div>
     `;
     box.appendChild(card);
   });
 }
 
-async function closeTable(id){
-  if(!confirm("Masa "+id+" hesabı kapatılsın mı?")) return;
-  await fetch("/api/close",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ tableId:id })
-  });
+// --- UI HELPERS ---
+function handleInput(input) {
+    const tableId = input.dataset.table;
+    const name = input.dataset.name;
+    const val = input.value;
+    
+    // Validate Max
+    const max = parseFloat(input.getAttribute('max'));
+    if(parseFloat(val) > max) {
+        input.value = max;
+    }
+    
+    // Save state
+    const key = `${tableId}-${name}`;
+    if (input.value && input.value !== "0") {
+        partialPayInputs[key] = input.value;
+    } else {
+        delete partialPayInputs[key];
+    }
+    
+    // Update UI Total & Button State
+    const total = calculateSelectedTotal(tableId);
+    const indicator = document.getElementById(`selection-indicator-${tableId}`);
+    const btn = document.getElementById(`btn-pay-${tableId}`);
+    
+    if(indicator && btn) {
+        indicator.innerText = `Seçilen Tutar: ₺${total}`;
+        
+        if(total > 0) {
+            indicator.classList.remove('opacity-0');
+            btn.disabled = false;
+            btn.className = "text-sm py-3 rounded-lg font-bold transition bg-dark-700 hover:bg-gold-600 hover:text-dark-900 text-white cursor-pointer";
+        } else {
+            indicator.classList.add('opacity-0');
+            btn.disabled = true;
+            btn.className = "text-sm py-3 rounded-lg font-bold transition bg-dark-800 text-gray-600 cursor-not-allowed";
+        }
+    }
+}
+
+function calculateSelectedTotal(tableId) {
+    let total = 0;
+    // We must calculate based on current DOM inputs to be accurate for live changes
+    const inputs = document.querySelectorAll(`.partial-input[data-table="${tableId}"]`);
+    inputs.forEach(inp => {
+        const qty = parseFloat(inp.value) || 0;
+        const price = parseFloat(inp.dataset.price) || 0;
+        total += qty * price;
+    });
+    return total;
+}
+
+// --- MODAL LOGIC 1: PAYMENT ---
+function openPaymentModal(tableId) {
+    const total = calculateSelectedTotal(tableId);
+    if (total <= 0) return alert("Ödeme alınacak ürün seçilmedi.");
+
+    pendingPaymentTableId = tableId;
+    document.getElementById("modalAmount").innerText = `₺${total}`;
+    
+    const modal = document.getElementById("paymentModal");
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    setTimeout(() => modal.classList.add("modal-active"), 10);
+    stopRefresh();
+}
+
+function closePaymentModal() {
+    const modal = document.getElementById("paymentModal");
+    modal.classList.remove("modal-active");
+    modal.classList.remove("flex");
+    modal.classList.add("hidden");
+    
+    pendingPaymentTableId = null;
+    startRefresh();
+}
+
+async function confirmPaymentProcess() {
+    if (!pendingPaymentTableId) return;
+    const tableId = pendingPaymentTableId;
+    
+    const inputs = document.querySelectorAll(`.partial-input[data-table="${tableId}"]`);
+    const items = [];
+    inputs.forEach(inp => {
+      const qty = Number(inp.value);
+      if (qty > 0) items.push({ name: inp.dataset.name, qty });
+    });
+
+    if (!items.length) {
+        closePaymentModal();
+        return;
+    }
+
+    try {
+        await apiCall("/api/partial-pay", { tableId, items });
+        // Cleanup inputs
+        items.forEach(i => delete partialPayInputs[`${tableId}-${i.name}`]);
+    } catch(e) {
+        alert("Ödeme işlemi başarısız: " + e.message);
+    }
+    
+    closePaymentModal();
+    loadTables();
+}
+
+// --- MODAL LOGIC 2: CLOSE TABLE (New) ---
+function openCloseModal(tableId) {
+    pendingCloseTableId = tableId;
+    document.getElementById("closeModalTableName").innerText = `Masa ${tableId}`;
+    
+    const modal = document.getElementById("closeTableModal");
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    setTimeout(() => modal.classList.add("modal-active"), 10);
+    stopRefresh();
+}
+
+function closeCloseModal() {
+    const modal = document.getElementById("closeTableModal");
+    modal.classList.remove("modal-active");
+    modal.classList.remove("flex");
+    modal.classList.add("hidden");
+    
+    pendingCloseTableId = null;
+    startRefresh();
+}
+
+async function confirmCloseTableProcess() {
+    if (!pendingCloseTableId) return;
+    const id = pendingCloseTableId;
+
+    try {
+        await apiCall("/api/close", { tableId: id });
+        
+        // Cleanup saved spinner inputs for this table
+        Object.keys(partialPayInputs).forEach(k => {
+          if(k.startsWith(id+'-')) delete partialPayInputs[k];
+        });
+    } catch(e) {
+        alert("Kapatma işlemi başarısız: " + e.message);
+    }
+
+    closeCloseModal();
+    loadTables();
+}
+
+// --- ACTION CALLS ---
+async function confirmOrder(tableId, orderId) {
+  await apiCall("/api/confirm", { tableId, orderId });
   loadTables();
 }
-async function confirmOrder(tableId, orderIndex) {
-  await fetch("/api/confirm", {
+
+async function apiCall(url, body) {
+  await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      tableId,
-      orderIndex
-    })
+    headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
+    body: JSON.stringify(body)
   });
-
-  loadTables();
 }
 
-loadTables();
-setInterval(loadTables,3000);
-</script>
+// --- MENU LOGIC ---
+async function loadMenuForAdmin() {
+  try {
+    const res = await fetch("/api/menu");
+    const menu = await res.json();
+    const list = document.getElementById("menuList");
+    list.innerHTML = "";
 
+    if(menu.length === 0) {
+        list.innerHTML = `<div class="text-center text-gray-500 py-10">Menüde henüz ürün yok.</div>`;
+        return;
+    }
+
+    menu.forEach(item => {
+      const el = document.createElement("div");
+      el.className = "flex gap-4 bg-dark-800 p-3 rounded-lg border border-dark-700 hover:border-gray-600 transition group";
+      el.innerHTML = `
+        <img src="${item.image}" class="w-16 h-16 rounded object-cover bg-gray-700">
+        <div class="flex-1">
+          <div class="flex justify-between items-start">
+              <h4 class="font-bold text-white">${item.name}</h4>
+              <span class="text-gold-500 font-bold">₺${item.price}</span>
+          </div>
+          <p class="text-xs text-gray-500">${item.category}</p>
+          <p class="text-xs text-gray-400 mt-1 truncate">${item.description}</p>
+        </div>
+        <button onclick="deleteProduct('${item.id}')" class="text-red-500 hover:bg-red-500/10 p-2 rounded self-center opacity-0 group-hover:opacity-100 transition">
+          🗑
+        </button>
+      `;
+      list.appendChild(el);
+    });
+  } catch(e) {
+    console.error("Menü yüklenirken hata:", e);
+  }
+}
+
+async function addProduct(e) {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const data = Object.fromEntries(formData.entries());
+  
+  try {
+    const res = await fetch("/api/add-product", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
+        body: JSON.stringify(data)
+    });
+    
+    if (res.ok) {
+        e.target.reset();
+        loadMenuForAdmin();
+        alert("Ürün başarıyla eklendi!");
+    } else {
+        const err = await res.json();
+        alert("Hata: " + (err.error || "Bilinmeyen hata"));
+    }
+  } catch(err) {
+      alert("Sunucuya erişilemedi");
+  }
+}
+
+async function deleteProduct(id) {
+  if(!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
+  try {
+    const res = await fetch(`/api/delete-product/${id}`, { 
+        method: "DELETE",
+        headers: { "x-admin-token": adminToken }
+    });
+    if(res.ok) {
+        loadMenuForAdmin();
+    } else {
+        alert("Silme işlemi başarısız");
+    }
+  } catch(err) {
+      alert("Hata oluştu");
+  }
+}
+
+// --- REPORTS LOGIC (UPDATED WITH DATE FIX) ---
+async function loadReports() {
+    try {
+        const res = await fetch("/api/reports");
+        const sales = await res.json();
+        
+        // Use user's local date string for comparison to match "Today" correctly in any timezone
+        const todayStr = new Date().toLocaleDateString("tr-TR");
+        
+        const todaySales = sales.filter(s => {
+            // Server saves UTC ISO string. We convert it to local date string to compare.
+            const saleDate = new Date(s.date).toLocaleDateString("tr-TR");
+            return saleDate === todayStr;
+        });
+        
+        // Calculate Totals
+        const todayTotal = todaySales.reduce((acc, s) => acc + (s.totalAmount || 0), 0);
+        const todayCount = todaySales.length;
+        
+        // Update Cards
+        document.getElementById("report-today-total").innerText = `₺${todayTotal.toFixed(2)}`;
+        document.getElementById("report-today-count").innerText = todayCount;
+        
+        // Render Table (Last 50 sales, reversed)
+        const tbody = document.getElementById("reports-table-body");
+        tbody.innerHTML = "";
+        
+        // Copy and reverse for display
+        const displaySales = [...sales].reverse().slice(0, 50);
+        
+        if (displaySales.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center">Henüz satış yok</td></tr>`;
+            return;
+        }
+
+        displaySales.forEach(s => {
+            const dateObj = new Date(s.date);
+            const formattedDate = dateObj.toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+            
+            const tr = document.createElement("tr");
+            tr.className = "hover:bg-dark-700/50 transition";
+            tr.innerHTML = `
+                <td class="px-6 py-4 font-mono text-gray-300">${formattedDate}</td>
+                <td class="px-6 py-4 font-bold text-white">Masa ${s.tableId}</td>
+                <td class="px-6 py-4 text-gold-500 font-bold">₺${(s.totalAmount || 0).toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+    } catch(e) {
+        console.error("Raporlar yüklenemedi", e);
+    }
+}
+
+// Init
+if (adminToken) showApp();
+else document.getElementById("loginScreen").style.display = "flex";
+
+</script>
 </body>
 </html>
