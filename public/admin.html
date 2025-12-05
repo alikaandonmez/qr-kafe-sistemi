@@ -60,10 +60,11 @@
       <h2 class="text-2xl font-bold mb-2 text-center">Giriş Yap</h2>
       <p class="text-gray-400 text-sm text-center mb-6">Yönetici paneline erişmek için şifre giriniz.</p>
       
+      <!-- Password Input -->
       <input type="password" id="adminPass" placeholder="Şifre" 
              class="w-full bg-dark-900 border border-dark-700 rounded-lg px-4 py-3 mb-4 focus:ring-2 focus:ring-gold-500 focus:outline-none transition">
       
-      <button onclick="adminLogin()" 
+      <button onclick="adminLogin()" id="loginBtn"
               class="w-full bg-gold-500 hover:bg-gold-600 text-dark-900 font-bold py-3 rounded-lg transition transform active:scale-95">
         Giriş Yap
       </button>
@@ -856,6 +857,17 @@ async function loadReports() {
 if (adminToken) showApp();
 else document.getElementById("loginScreen").style.display = "flex";
 
+// --- GÜNCELLEME BURADA ---
+// Kullanıcı adminPass kutusundayken ENTER'a basarsa giriş yapsın
+const passInput = document.getElementById("adminPass");
+if (passInput) {
+    passInput.addEventListener("keyup", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            adminLogin();
+        }
+    });
+}
 </script>
 </body>
 </html>
